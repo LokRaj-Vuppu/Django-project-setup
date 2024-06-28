@@ -1,0 +1,41 @@
+<!doctype html>
+<html>
+    {% load static %}
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+  <h1 class="text-3xl font-bold underline">
+    <h1>Welcome to Deployment with Docker and Kubernetes</h1>
+    <img class="object-cover h-48 w-96 m-2" src="{% static 'software.webp' %}" alt="Image not found">
+  </h1>
+
+  <!-- form -->
+   <div class="m-5">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <!-- {{ form }} -->
+            <input type="text" placeholder="Enter Name" name="username" class="input input-bordered w-full max-w-xs" required/>
+            <input type="file" name="uploaded_file" class="file-input file-input-bordered w-full max-w-xs" required/>
+            <button class="btn btn-accent">Upload</button>
+      </form>
+   </div>
+
+   <!-- ALL uploaded file -->
+    {{all_uploaded_files}}
+    <div>
+        {% for data in all_uploaded_files %}
+            {{data.name}} - 
+            {% if data.user_docs %}
+              <img src="{{data.user_docs.url}}" alt="Not Found"/>
+            {% else %}
+              <p>NO file found</p>
+            {% endif %}
+        {% endfor %}
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,123 @@
+
+
+services:
+  # Django 
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: backend
+    restart: unless-stopped
+    volumes:
+      - static_data:/vol/web
+    environment:
+      - SECRET_KEY=${SECRET_KEY}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS}
+      - DEBUG=${DEBUG}
+    depends_on:
+      - db
+
+
+  # Posgtres
+  db:
+    image: postgres:16-alpine
+    container_name: db_postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - postgres_db_data:/var/lib/postgresql/data
+
+
+  # Pgadmin
+  pgadmin:
+    container_name: db_pgadmin
+    restart: unless-stopped
+    image: dpage/pgadmin4
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL}
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_DEFAULT_PASSWORD}
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+
+    # Celery
+  celery:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: celery
+    command: ["celery", "-A", "app", "worker", "--loglevel=info", "--pool=solo"]
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=django-db
+    depends_on:
+      - app
+      - redis
+
+
+  # Celery Beat
+  celery-beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: celery-beat
+    command: ["celery", "-A", "app", "beat", "--loglevel=info"]
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=django-db
+    depends_on:
+      - redis
+
+  
+  # Flower
+  flower:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: flower
+    command: ["celery", "-A", "app", "flower", "--port=5555"]
+    ports:
+      - "5555:5555"
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=django-db
+    depends_on:
+      - redis
+
+
+  # Redis
+  redis:
+    image: redis:7.2-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+
+
+
+  # Nginx
+  proxy:
+    build:
+      context: ./proxy
+      dockerfile: Dockerfile
+    container_name: server_nginx
+    restart: unless-stopped
+    volumes:
+      - static_data:/vol/static
+    ports:
+      - "8080:8080"
+    depends_on:
+      - app
+
+
+# define volumes
+volumes:
+  static_data:
+  postgres_db_data:
+
+    
